@@ -4,6 +4,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,23 +20,44 @@ public class MongoSpringApplication {
 	}
 
 	@Bean
-	CommandLineRunner runner(StrudentRepository repository){
+	CommandLineRunner runner(StudentRepository repository, MongoTemplate mongoTemplate){
 		return args -> {
 				Address address = new Address(
 						"India",
 						"Udaipur",
 						"313001");
 				Student student = new Student(
-						"Puru",
+						"Gagan",
 						"Agarwal",
-						"puru.agar99@gmail.com",
-						Gender.MALE,
+						"gaganagarwala@gmail.com",
+						Gender.FEMALE,
 						address,
-						List.of("Computer Science", "Maths"),
+						List.of("History", "Maths"),
 						BigDecimal.TEN,
 						LocalDateTime.now());
 
-				repository.insert(student);
+//			usingMongoTemplateAndQuery(repository, mongoTemplate, student);
+
+			repository.findStudentByEmail(student.getEmail())
+					.ifPresentOrElse(s -> System.out.println("Student Alredy Exists"),
+							() -> {
+						System.out.println("Inserting Student...");
+						repository.insert(student);
+					});
 		};
+	}
+
+	private void usingMongoTemplateAndQuery(StudentRepository repository, MongoTemplate mongoTemplate, Student student) {
+		Query query = new Query();
+		query.addCriteria(Criteria.where("email").is(student.getEmail()));
+
+		List<Student> list = mongoTemplate.find(query, Student.class);
+
+		if(list.isEmpty()){
+			System.out.println("Inserting Student...");
+			repository.insert(student);
+		}
+		else
+			System.out.println("Student Alredy Exists");
 	}
 }
